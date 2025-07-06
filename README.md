@@ -1,3 +1,12 @@
+# InfiltrationEngine ToolingForTinkerers
+**This repository is a fork** of the original, which may be found @ https://github.com/MoonstoneSkies/InfiltrationEngine-Custom-Missions
+
+For the purposes of anyone not in-deep trying to experiment with undocumented stuff, those tools will do just fine
+
+**Do NOT submit bug reports for bugs which occur when using this fork of the tools**, only report a bug if it can be reproduced with the unmodified official tooling
+
+To confirm that users of the tool have read this, none of this fork's features will function without setting a "`ToolingIsInFactForTinkerers`" attribute to `true` on `workspace`
+
 # InfiltrationEngine Custom Missions
 This repository contains tooling and templates for the InfiltrationEngine games, better known as Entry Point: Freelancer's Cut and Operators
 

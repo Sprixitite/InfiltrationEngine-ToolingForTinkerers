@@ -251,67 +251,72 @@ end
 
 return {
 	Validate = function(className, instanceName, attributes, includeDefaults)
+		-- hack but I just want to get this working
+		disableValidation = _G.__disable_validation_on_toolingfortinkerers or false
 		if className == "Folder" then
 			return attributes
 		end
-
+		
 		local name = className == "BoolValue" and attributes.Type or instanceName
 		if not AttributesMap[name] then
 			return attributes -- If not included in the prop list, just return the normal attributes list
-		else
-			local newAttributes = {}
-			local attributeTypes = AttributesMap[name]
-			for attName, tableOfInfo in pairs(attributeTypes) do -- add attributes specifically listed in AttributesMap.lua
-				if not attributes[attName] then
-					if includeDefaults then
-						newAttributes[attName] = tableOfInfo[2]
-					end
+		end
+		
+		local newAttributes = {}
+		local attributeTypes = AttributesMap[name]
+		for attName, tableOfInfo in pairs(attributeTypes) do -- add attributes specifically listed in AttributesMap.lua
+			if not attributes[attName] then
+				if includeDefaults then
+					newAttributes[attName] = tableOfInfo[2]
+				end
+				continue
+			end
+			local givenValue = attributes[attName]
+			local attributeTypeName = ""
+			for i, v in pairs(PropAttributeTypes) do
+				if tableOfInfo[1] == v then
+					attributeTypeName = i
+				end
+			end
+			if attributeTypeName == "" then
+				error(`attribute type does not exist: {name} {attName}`)
+			end
+			if not testAttributeCompatibility(attributeTypeName, givenValue, name, attName) then
+				if includeDefaults then
+					newAttributes[attName] = attributeTypes[attName][2]
+				else
 					continue
 				end
-				local givenValue = attributes[attName]
+			end
+			-- If the value isn't default or is and the includeDefaults value is set to true, then add it to the list
+			if (tableOfInfo[2] == givenValue and includeDefaults) or tableOfInfo[2] ~= givenValue then
+				newAttributes[attName] = givenValue
+			end
+		end
+		for attribute, value in pairs(attributes) do -- add the remaining attributes that are defined in the global attributes table above
+			if GlobalPropAttributes[attribute] then
+				local tableOfInfo = GlobalPropAttributes[attribute]
 				local attributeTypeName = ""
 				for i, v in pairs(PropAttributeTypes) do
 					if tableOfInfo[1] == v then
 						attributeTypeName = i
 					end
 				end
-				if attributeTypeName == "" then
-					error(`attribute type does not exist: {name} {attName}`)
+				if testAttributeCompatibility(attributeTypeName, value, name, attribute) then
+					newAttributes[attribute] = value
+				else
+					newAttributes[attribute] = nil -- set to nil if it doesn't fit properly
 				end
-				if not testAttributeCompatibility(attributeTypeName, givenValue, name, attName) then
-					if includeDefaults then
-						newAttributes[attName] = attributeTypes[attName][2]
-					else
-						continue
-					end
-				end
-				-- If the value isn't default or is and the includeDefaults value is set to true, then add it to the list
-				if (tableOfInfo[2] == givenValue and includeDefaults) or tableOfInfo[2] ~= givenValue then
-					newAttributes[attName] = givenValue
-				end
+			elseif not attributeTypes[attribute] and disableValidation then
+				warn("Bypassing attribute validation for attribute:", attribute, name)
+				newAttributes[attribute] = value
+			elseif not attributeTypes[attribute] then
+				warn("Unknown attribute will be discarded:", attribute, name)
 			end
-			for attribute, value in pairs(attributes) do -- add the remaining attributes that are defined in the global attributes table above
-				if GlobalPropAttributes[attribute] then
-					local tableOfInfo = GlobalPropAttributes[attribute]
-					local attributeTypeName = ""
-					for i, v in pairs(PropAttributeTypes) do
-						if tableOfInfo[1] == v then
-							attributeTypeName = i
-						end
-					end
-					if testAttributeCompatibility(attributeTypeName, value, name, attribute) then
-						newAttributes[attribute] = value
-					else
-						newAttributes[attribute] = nil -- set to nil if it doesn't fit properly
-					end
-				elseif not attributeTypes[attribute] then
-					warn("Unknown attribute will be discarded:", attribute, name)
-				end
-			end
-
-			return newAttributes
 		end
-	end,
+
+		return newAttributes
+	end
 }]]></ProtectedString>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
@@ -3503,6 +3508,7 @@ module.Init = function(mouse: PluginMouse)
 			Position = UDim2.new(0, 50, 0, 50),
 			Text = "Generate Code",
 			Activated = function()
+				_G.__disable_validation_on_toolingfortinkerers = false
 				local mission = workspace:FindFirstChild("DebugMission")
 					or game.ReplicatedStorage:FindFirstChild("DebugMission")
 				if not mission then
@@ -3519,13 +3525,40 @@ module.Init = function(mouse: PluginMouse)
 				CodeState:set(code)
 			end,
 		}),
-		if workspace:GetAttribute("ReadDocs")
-			then Button({
+		if workspace:GetAttribute("ToolingIsInFactForTinkerers") then
+			Button({
 				Size = UDim2.new(0, 200, 0, 30),
 				Enabled = module.EnabledState,
 				Position = UDim2.new(0, 270, 0, 50),
+				Text = "Generate Validationless",
+				Activated = function()
+					_G.__disable_validation_on_toolingfortinkerers = true
+					local mission = workspace:FindFirstChild("DebugMission")
+					or game.ReplicatedStorage:FindFirstChild("DebugMission")
+					if not mission then
+						error(
+							"No mission found: Mission must be named 'DebugMission' and placed in workspace or ReplicatedStorage"
+						)
+					end
+					local code = Write.Mission(mission)
+
+					if not workspace:FindFirstChild("DebugMission") then
+						local model = Read.Mission(code, 1)
+						model.Parent = workspace
+					end
+					CodeState:set(code)
+					_G.__disable_validation_on_toolingfortinkerers = false
+				end,
+			})
+		else nil,
+		if workspace:GetAttribute("ReadDocs") then 
+			Button({
+				Size = UDim2.new(0, 200, 0, 30),
+				Enabled = module.EnabledState,
+				Position = UDim2.new(0, 490, 0, 50),
 				Text = "Gist Code",
 				Activated = function()
+					_G.__disable_validation_on_toolingfortinkerers = false
 					local mission = workspace:FindFirstChild("DebugMission")
 						or game.ReplicatedStorage:FindFirstChild("DebugMission")
 					if not mission then
