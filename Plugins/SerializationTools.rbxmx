@@ -3618,6 +3618,7 @@ module.Init = function(mouse: PluginMouse)
 			Text = "Generate Code",
 			Activated = function()
 				_G.__disable_validation_on_toolingfortinkerers = false
+				_G.__disable_validation_on_toolingfortinkerers = false
 				local mission = workspace:FindFirstChild("DebugMission")
 					or game.ReplicatedStorage:FindFirstChild("DebugMission")
 				if not mission then
@@ -3636,9 +3637,37 @@ module.Init = function(mouse: PluginMouse)
 		}),
 		if workspace:GetAttribute("ToolingIsInFactForTinkerers") then
 			Button({
+		if workspace:GetAttribute("ToolingIsInFactForTinkerers") then
+			Button({
 				Size = UDim2.new(0, 200, 0, 30),
 				Enabled = module.EnabledState,
 				Position = UDim2.new(0, 270, 0, 50),
+				Text = "Generate Validationless",
+				Activated = function()
+					_G.__disable_validation_on_toolingfortinkerers = true
+					local mission = workspace:FindFirstChild("DebugMission")
+					or game.ReplicatedStorage:FindFirstChild("DebugMission")
+					if not mission then
+						error(
+							"No mission found: Mission must be named 'DebugMission' and placed in workspace or ReplicatedStorage"
+						)
+					end
+					local code = Write.Mission(mission)
+
+					if not workspace:FindFirstChild("DebugMission") then
+						local model = Read.Mission(code, 1)
+						model.Parent = workspace
+					end
+					CodeState:set(code)
+					_G.__disable_validation_on_toolingfortinkerers = false
+				end,
+			})
+		else nil,
+		if workspace:GetAttribute("ReadDocs") then 
+			Button({
+				Size = UDim2.new(0, 200, 0, 30),
+				Enabled = module.EnabledState,
+				Position = UDim2.new(0, 490, 0, 50),
 				Text = "Generate Validationless",
 				Activated = function()
 					_G.__disable_validation_on_toolingfortinkerers = true
