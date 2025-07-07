@@ -7,6 +7,25 @@ For the purposes of anyone not in-deep trying to experiment with undocumented st
 
 To confirm that users of the tool have read this, none of this fork's features will function without setting a "`ToolingIsInFactForTinkerers`" attribute to `true` on `workspace`
 
+## Attribute Discard Logging
+After enabling tinker features (see prior section) attribute discard logging will be enabled - this will log a warning any time an attribute is discarded by the exporter, accompanied by a reason for the discard
+
+Discards come in the following levels, ordered highest to lowest priority
+1) `AttrUnknown` - Attribute is not known to be valid and will not be bypassed
+2) `AttrIncompat` - Attribute's type is not compatible with the known valid type
+3) `AttrUnknownBypass` - Attribute is not known to be valid but bypassing is enabled
+4) `UncaughtDiscard` - A discard my code didn't catch elsewhere, currently a failsafe for failing to detect a discard
+5) `DefaultPolicy` - Attribute's value was the same as the default value, and was discarded as serializing defaults was disabled
+
+The `TinkerAttrLogLevel` attribute on `workspace` may be set to any of the following values to limit logging:
+- `NONE`/`MIN`
+- `ATTR_UNKNOWN`
+- `ATTR_INCOMPAT`/`DEFAULT`
+- `ATTR_UNKNOWN_BYPASS`
+- `UNCAUGHT_DISCARD`
+- `DEFAULT_POLICY`
+- `MAX`/`ALL`
+
 # InfiltrationEngine Custom Missions
 This repository contains tooling and templates for the InfiltrationEngine games, better known as Entry Point: Freelancer's Cut and Operators
 

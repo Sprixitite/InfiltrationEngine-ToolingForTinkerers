@@ -249,6 +249,12 @@ local testAttributeCompatibility = function(attributeType, value, objectName, at
 	end
 end
 
+local function fmtWarn(reason, instanceName, attrName, className)
+	return `[{reason}] {instanceName}.{attrName} [Class: {className}]`
+end
+
+local tinkerExt = require(script.Parent.TinkerExtensions)
+
 return {
 	Validate = function(className, instanceName, attributes, includeDefaults)
 		local tinkering = workspace:GetAttribute("ToolingIsInFactForTinkerers")
@@ -264,6 +270,7 @@ return {
 			return attributes -- If not included in the prop list, just return the normal attributes list
 		end
 		
+		local attrsAcknowledged = {}
 		local newAttributes = {}
 		local attributeTypes = AttributesMap[name]
 		for attName, tableOfInfo in pairs(attributeTypes) do -- add attributes specifically listed in AttributesMap.lua
@@ -284,6 +291,10 @@ return {
 				error(`attribute type does not exist: {name} {attName}`)
 			end
 			if not testAttributeCompatibility(attributeTypeName, givenValue, name, attName) then
+				if tinkering then
+					tinkerExt.AttValWarn(tinkerExt.AttValLogLevel.ATTR_INCOMPAT, instanceName, attName, name)
+					attrsAcknowledged[attName] = true
+				end
 				if includeDefaults then
 					newAttributes[attName] = attributeTypes[attName][2]
 				else
@@ -293,10 +304,12 @@ return {
 			-- If the value isn't default or is and the includeDefaults value is set to true, then add it to the list
 			if (tableOfInfo[2] == givenValue and includeDefaults) or tableOfInfo[2] ~= givenValue then
 				newAttributes[attName] = givenValue
+			elseif tinkering then
+				tinkerExt.AttValWarn(tinkerExt.AttValLogLevel.DEFAULT_POLICY, instanceName, attName, name)
+				attrsAcknowledged[attName] = true
 			end
 		end
 		
-		local attrsAcknowledged = {}
 		for attribute, value in pairs(attributes) do -- add the remaining attributes that are defined in the global attributes table above
 			if GlobalPropAttributes[attribute] then
 				local tableOfInfo = GlobalPropAttributes[attribute]
@@ -311,22 +324,25 @@ return {
 					continue
 				end
 				if tinkering then
-					warn(`Attribute {instanceName}.{attribute} [Class: {name}] defaulted to nil due to attribute incompatibility!`)
+					tinkerExt.AttValWarn(tinkerExt.AttValLogLevel.ATTR_INCOMPAT, instanceName, attribute, name)
 					attrsAcknowledged[attribute] = true
 				end
 				newAttributes[attribute] = nil -- set to nil if it doesn't fit properly
 			elseif not attributeTypes[attribute] and disableValidation then
-				warn(`Bypassing attribute validation for {instanceName}.{attribute} [Class: {name}]`)
+				tinkerExt.AttValWarn(tinkerExt.AttValLogLevel.ATTR_UNKNOWN_BYPASS, instanceName, attribute, name)
 				newAttributes[attribute] = value
 			elseif not attributeTypes[attribute] then
-				warn("Unknown attribute will be discarded:", attribute, name)
+				if tinkering then tinkerExt.AttValWarn(tinkerExt.AttValLogLevel.ATTR_UNKNOWN, instanceName, attribute, name)
+				else warn("Unknown attribute will be discarded:", attribute, name) end
 				if tinkering then attrsAcknowledged[attribute] = true end
 			end
 		end
 		
-		for attribute, _ in next, attributes do
-			if newAttributes[attribute] == nil and attrsAcknowledged[attribute] == nil and tinkering then
-				warn(`Uncaught attribute discard occurred for {instanceName}.{attribute} [Class: {name}]`)
+		if tinkering then
+			for attribute, _ in next, attributes do
+				if newAttributes[attribute] == nil and attrsAcknowledged[attribute] == nil then
+					tinkerExt.AttValWarn(tinkerExt.AttValLogLevel.UNCAUGHT_DISCARD, instanceName, attribute, name)
+				end
 			end
 		end
 
@@ -4093,6 +4109,45 @@ return WriteInstance]]></ProtectedString>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
+		</Item>
+		<Item class="ModuleScript" referent="RBX77FCE60A1DD34C58A8F7868A803EDBFA">
+			<Properties>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<string name="Name">TinkerExtensions</string>
+				<string name="ScriptGuid">{F7080467-649F-4D08-8AAB-ABA270D6FD03}</string>
+				<ProtectedString name="Source"><![CDATA[local Tinker = {}
+
+Tinker.AttValLogLevel = {
+	NONE = {0, "ERROR"},
+	MIN = {0, "ERROR"},
+	DEFAULT = {2, "ERROR"},
+	ATTR_UNKNOWN = {1, "AttrUnknown"},
+	ATTR_INCOMPAT  = {2, "AttrIncompat"},
+	ATTR_UNKNOWN_BYPASS = {3, "AttrUnknownBypass"},
+	UNCAUGHT_DISCARD = {4, "UncaughtDiscard"},
+	DEFAULT_POLICY = {5, "DefaultPolicy"},
+	ALL = {4736251, "ERROR"},
+	MAX = {4736251, "ERROR"}
+}
+
+function Tinker.GetAttrLogLevel()
+	local logAttrVal = workspace:GetAttribute("TinkerAttrLogLevel")
+	return logAttrVal and Tinker.AttValLogLevel[string.upper(logAttrVal)] or Tinker.AttValLogLevel.DEFAULT
+end
+
+function Tinker.AttValWarn(logLevel, instanceName, attrName, className)
+	if logLevel[1] > Tinker.GetAttrLogLevel()[1] then return end
+	warn(`[{logLevel[2]}] [Class: {className}] {instanceName}.{attrName}`)
+end
+
+return Tinker
+]]></ProtectedString>
+				<int64 name="SourceAssetId">-1</int64>
+				<BinaryString name="Tags"></BinaryString>
+			</Properties>
 		</Item>
 	</Item>
 </roblox>
