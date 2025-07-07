@@ -251,6 +251,8 @@ end
 
 return {
 	Validate = function(className, instanceName, attributes, includeDefaults)
+		local tinkering = workspace:GetAttribute("ToolingIsInFactForTinkerers")
+		
 		-- hack but I just want to get this working
 		disableValidation = _G.__disable_validation_on_toolingfortinkerers or false
 		if className == "Folder" then
@@ -293,6 +295,8 @@ return {
 				newAttributes[attName] = givenValue
 			end
 		end
+		
+		local attrsAcknowledged = {}
 		for attribute, value in pairs(attributes) do -- add the remaining attributes that are defined in the global attributes table above
 			if GlobalPropAttributes[attribute] then
 				local tableOfInfo = GlobalPropAttributes[attribute]
@@ -304,14 +308,25 @@ return {
 				end
 				if testAttributeCompatibility(attributeTypeName, value, name, attribute) then
 					newAttributes[attribute] = value
-				else
-					newAttributes[attribute] = nil -- set to nil if it doesn't fit properly
+					continue
 				end
+				if tinkering then
+					warn(`Attribute {instanceName}.{attribute} [Class: {name}] defaulted to nil due to attribute incompatibility!`)
+					attrsAcknowledged[attribute] = true
+				end
+				newAttributes[attribute] = nil -- set to nil if it doesn't fit properly
 			elseif not attributeTypes[attribute] and disableValidation then
-				warn("Bypassing attribute validation for attribute:", attribute, name)
+				warn(`Bypassing attribute validation for {instanceName}.{attribute} [Class: {name}]`)
 				newAttributes[attribute] = value
 			elseif not attributeTypes[attribute] then
 				warn("Unknown attribute will be discarded:", attribute, name)
+				if tinkering then attrsAcknowledged[attribute] = true end
+			end
+		end
+		
+		for attribute, _ in next, attributes do
+			if newAttributes[attribute] == nil and attrsAcknowledged[attribute] == nil and tinkering then
+				warn(`Uncaught attribute discard occurred for {instanceName}.{attribute} [Class: {name}]`)
 			end
 		end
 
