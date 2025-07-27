@@ -6,7 +6,7 @@
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 			<bool name="DefinesCapabilities">false</bool>
-			<string name="Name">SerializationTools</string>
+			<string name="Name">SerializationTools-Tinkerer</string>
 			<int64 name="SourceAssetId">-1</int64>
 			<BinaryString name="Tags"></BinaryString>
 		</Properties>
@@ -3729,6 +3729,50 @@ module.Init = function(mouse: PluginMouse)
 					end)
 					s.Parent = workspace
 					ScriptEditorService:OpenScriptDocumentAsync(s)
+				end,
+			})
+			else nil,
+		if workspace:GetAttribute("ReadDocs") and workspace:GetAttribute("ToolingIsInFactForTinkerers") then
+			Button({
+				Size = UDim2.new(0, 200, 0, 30),
+				Enabled = module.EnabledState,
+				Position = UDim2.new(0, 710, 0, 50),
+				Text = "Gist Code Validationless",
+				Activated = function()
+					_G.__disable_validation_on_toolingfortinkerers = true
+					local mission = workspace:FindFirstChild("DebugMission")
+					or game.ReplicatedStorage:FindFirstChild("DebugMission")
+					if not mission then
+						error(
+							"No mission found: Mission must be named 'DebugMission' and placed in workspace or ReplicatedStorage"
+						)
+					end
+					local code = Write.Mission(mission)
+
+					if not workspace:FindFirstChild("DebugMission") then
+						local model = Read.Mission(code, 1)
+						model.Parent = workspace
+					end
+
+					local output = ""
+					output = StringConversion.NumberToString(VERSION_NUMBER, 1)
+					output = output .. Write.ShortInt(math.random(1, 100))
+					output = output .. Write.ShortInt(1)
+					output = output .. Write.ShortInt(1)
+					output = output .. code
+
+					if workspace:FindFirstChild("CustomMissionCode") then
+						workspace.CustomMissionCode:Destroy()
+					end
+
+					local s = Instance.new("Script")
+					s.Name = "CustomMissionCode"
+					ScriptEditorService:UpdateSourceAsync(s, function()
+						return output
+					end)
+					s.Parent = workspace
+					ScriptEditorService:OpenScriptDocumentAsync(s)
+					_G.__disable_validation_on_toolingfortinkerers = false
 				end,
 			})
 			else nil,
